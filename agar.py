@@ -21,13 +21,35 @@ class Player:
     def update(self,win):
         self.draw(win)
 
-
+class BG:
+    def __init__(self,x,y,w,h,dx,dy):
+        self.x = x
+        self.y = y
+        self.width = w
+        self.height = h
+        self.dirx = dx
+        self.diry = dy
+        self.image = pygame.transform.scale(pygame.image.load('bg2.jpg'),(self.width,self.height)).convert_alpha()
+    def draw(self,win):
+        self.rect = win.blit(self.image,(self.x,self.y))
+    def update(self,win):
+        if self.dirx == 'right':
+            self.x = self.x + 1
+        if self.dirx == 'left':
+            self.x = self.x - 1
+        if self.diry == 'up':
+            self.y = self.y - 1
+        if self.diry == 'down':
+            self.y = self.y + 1
+        self.draw(win)
 
 player = Player(WIDTH//2,HEIGHT//2,(140, 46, 184),50)
+center_bg = BG(0,0,WIDTH,HEIGHT,0,0)
 
 def redrawwindow(mousexy):
     win.fill((0,0,0))
     player.centerx,player.centery = mousexy   
+    center_bg.update(win)
     player.update(win)
     pygame.display.flip()
 
@@ -43,6 +65,14 @@ while run:
     mousexy = pygame.mouse.get_pos()
     
     relxy = pygame.mouse.get_rel()
+    if relxy[0] < 0:
+        center_bg.dirx = 'right'
+    if relxy[1] < 0:
+        center_bg.diry = 'down'
+    if relxy[0] > 0:
+        center_bg.dirx = 'left'
+    if relxy[1] > 0:
+        center_bg.diry = 'up'
 
     redrawwindow(mousexy)
 pygame.quit()
