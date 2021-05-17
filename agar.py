@@ -19,6 +19,7 @@ class Player:
         self.color = color
         self.radius= r
         self.score = 0
+        self.collision = False
     def draw(self,win):
         pygame.draw.circle(win,self.color,(self.centerx,self.centery),self.radius)
     def update(self,win):
@@ -66,8 +67,7 @@ class Food:
         self.visible = True
     def draw(self,win):
         pygame.draw.circle(win,self.color,(self.x,self.y),self.radius)            
-    def update(self,win,player):
-        
+    def update(self,win,player): 
         if self.dirx == 'right':
             self.x = self.x + self.velx
         if self.dirx == 'left':
@@ -91,6 +91,47 @@ class Food:
         if self.visible:   
             self.draw(win)
 
+class Enemy:
+    def __init__(self,x,y,r):
+        self.centerx = x
+        self.centery = y
+        self.radius = r
+        self.directions = [0,1,2,3]
+        self.dirx = random.randint(0,1)
+        self.diry = random.randint(2,3)
+        self.velx = 1
+        self.vely = 1
+        self.collision = False
+        self.color = (random.randint(100,220),random.randint(100,220),random.randint(100,220))
+    def draw(self,win):
+        pygame.draw.circle(win,self.color,(self.centerx,self.centery),self.radius)
+        pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx+self.radius,self.centery+self.radius),5)
+        pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx-self.radius,self.centery+self.radius),5)
+        pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx,self.centery-(self.radius+5)),5)
+    def update(self,win):  #0 for left, 1 for right, 2 for up , 3 for down
+        if self.centerx < 0 or self.centerx > WIDTH or self.centery < 0 or self.centery > HEIGHT:
+            if self.dirx == 0:
+                self.dirx = 1
+            else:
+                self.dirx = 0
+            if self.diry == 2:
+                self.diry = 3
+            else:
+                self.diry = 2
+        if self.dirx == 0 and self.diry == 2: #left and up 
+            self.centerx = self.centerx - self.velx
+            self.centery = self.centery - self.vely
+        if self.dirx == 0 and self.diry == 3: #left and down
+            self.centerx = self.centerx - self.velx
+            self.centery = self.centery + self.vely
+        if self.dirx == 1 and self.diry == 2: #right and up
+            self.centerx = self.centerx + self.velx
+            self.centery = self.centery - self.vely
+        if self.dirx == 1 and self.diry == 3: #right and down
+            self.centerx = self.centerx + self.velx
+            self.centery = self.centery + self.vely
+        self.draw(win)
+
 player = Player(WIDTH//2,HEIGHT//2,(140, 46, 184),30)
 center_bg = BG(0,0,WIDTH,HEIGHT,0,0)
 food_list=[]
@@ -98,6 +139,30 @@ food_count = 40
 for i in range(food_count):
     food = Food(random.randint(10,1200),random.randint(10,600),random.randint(3,7))
     food_list.append(food)
+
+enemy_list = []
+enemy_count = 10
+def check_player_enemy_collision(ex,ey,er):
+    global enemy_list    
+    dist = math.hypot(ex-player.centerx,ey-player.centery)
+    if dist <= player.radius+er:
+        return True
+    for e in enemy_list:
+        dist2 = math.hypot(ex-e.centerx,ey-e.centery)
+        if dist2 <= e.radius + er:
+            return True
+    return False
+
+for i in range(enemy_count):
+    res = True
+    ex,ey,er=0,0,0
+    while res == True:
+        ex = random.randint(10,1200)
+        ey = random.randint(10,600)
+        er = random.randint(30,50)
+        res = check_player_enemy_collision(ex,ey,er)    
+    enemy = Enemy(ex,ey,er)
+    enemy_list.append(enemy)
 
 bg_list = []
 bg_list.append(center_bg)
@@ -163,8 +228,13 @@ def redrawwindow():
     win.fill((0,0,0))   
     mousexy = pygame.mouse.get_pos() 
     player.centerx,player.centery = mousexy   
-    
-    
+
+    score = player.score
+    score_msg = 'Score: '+str(score)
+    textsurface1 = myfont.render(score_msg, False, (255,255,255))
+    pygame.draw.rect(win,(255,255,255),(5,5,200,65))
+    pygame.draw.rect(win,(194, 59, 17),(8,8,194,59))
+    win.blit(textsurface1,(11,11))
     #create_new_bg()
     #print('length :',len(bg_list))
     #check_bg_in_view()
@@ -195,6 +265,8 @@ def redrawwindow():
     for food in food_list:
         food.update(win,player)
     
+    for enemy in enemy_list:
+        enemy.update(win)
     player.update(win)
     pygame.display.update()
 
