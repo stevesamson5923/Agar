@@ -22,7 +22,9 @@ class Player:
         self.collision = False
     def draw(self,win):
         pygame.draw.circle(win,self.color,(self.centerx,self.centery),self.radius)
-    def update(self,win):
+    def update(self,win,enemy_list):
+        #player and enemy collision
+        
         self.draw(win)
 
 class BG:
@@ -63,8 +65,8 @@ class Food:
         self.diry = 0
         self.velx = 1
         self.vely = 1
-        self.collision = False
-        self.visible = True
+        self.collision = False  #when food is eaten by enemy or player
+        self.visible = True  # when food moves off boundary
     def draw(self,win):
         pygame.draw.circle(win,self.color,(self.x,self.y),self.radius)            
     def update(self,win,player): 
@@ -77,6 +79,7 @@ class Food:
         if self.diry == 'down':
             self.y = self.y + self.vely
         
+        #food and player collision
         distance = math.hypot(player.centerx-self.x,player.centery-self.y)
         if distance <= player.radius + self.radius:
             self.collision = True
@@ -108,7 +111,8 @@ class Enemy:
         pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx+self.radius,self.centery+self.radius),5)
         pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx-self.radius,self.centery+self.radius),5)
         pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx,self.centery-(self.radius+5)),5)
-    def update(self,win):  #0 for left, 1 for right, 2 for up , 3 for down
+    def update(self,win,food_list):  #0 for left, 1 for right, 2 for up , 3 for down
+        #Change direction
         if self.centerx < 0 or self.centerx > WIDTH or self.centery < 0 or self.centery > HEIGHT:
             if self.dirx == 0:
                 self.dirx = 1
@@ -118,6 +122,14 @@ class Enemy:
                 self.diry = 3
             else:
                 self.diry = 2
+        
+        #food and enemy collision
+        for food in food_list:
+            dist = math.hypot(food.x-self.centerx,food.y-self.centery)            
+            if dist <= food.radius + self.radius:
+                food.collision = True
+                self.radius = self.radius + int(food.radius * 0.02)
+
         if self.dirx == 0 and self.diry == 2: #left and up 
             self.centerx = self.centerx - self.velx
             self.centery = self.centery - self.vely
@@ -159,7 +171,7 @@ for i in range(enemy_count):
     while res == True:
         ex = random.randint(10,1200)
         ey = random.randint(10,600)
-        er = random.randint(30,50)
+        er = random.randint(30,40)
         res = check_player_enemy_collision(ex,ey,er)    
     enemy = Enemy(ex,ey,er)
     enemy_list.append(enemy)
@@ -265,9 +277,37 @@ def redrawwindow():
     for food in food_list:
         food.update(win,player)
     
+    #check enemy collision with other enemies
+    for i in range(len(enemy_list)):
+        for j in range(len(enemy_list)):
+            if j == i:
+                continue
+            else:
+                dist = math.hypot(enemy_list[i].centerx-enemy_list[j].centerx,enemy_list[i].centery-enemy_list[j].centery)
+                if dist <= enemy_list[i].radius + enemy_list[j].radius:
+                    if enemy_list[i].radius > enemy_list[j].radius: #i eats j
+                        enemy_list[j].collision = True
+                        enemy_list[i].radius = enemy_list[i].radius + int(enemy_list[j].radius * 0.05)
+                    elif enemy_list[i].radius < enemy_list[j].radius: #j eats i
+                        enemy_list[i].collision = True
+                        enemy_list[j].radius = enemy_list[j].radius + int(enemy_list[i].radius * 0.05)
+
+    #remove dead enemies and spawn new enemies
     for enemy in enemy_list:
-        enemy.update(win)
-    player.update(win)
+        if enemy.collision == True:
+            enemy_list.remove(enemy)
+            res = True
+            while res == True:
+                ex = random.randint(10,1200)
+                ey = random.randint(10,600)
+                er = random.randint(30,40)
+                res = check_player_enemy_collision(ex,ey,er) 
+            enemy = Enemy(ex,ey,er)
+            enemy_list.append(enemy)
+        else:
+            enemy.update(win,food_list)    
+
+    player.update(win,enemy_list)
     pygame.display.update()
 
 run=True
