@@ -24,7 +24,15 @@ class Player:
         pygame.draw.circle(win,self.color,(self.centerx,self.centery),self.radius)
     def update(self,win,enemy_list):
         #player and enemy collision
-        
+        for enemy in enemy_list:
+            distance = math.hypot(enemy.centerx-self.centerx,enemy.centery-self.centery)
+            if distance <= enemy.radius + self.radius:
+                if self.radius >= enemy.radius:
+                    self.score = self.score + int(enemy.radius * .50) 
+                    self.radius = self.radius + int(enemy.radius * .1)
+                    enemy.collision = True
+                elif self.radius < enemy.radius:
+                    self.collision = True             
         self.draw(win)
 
 class BG:
@@ -69,28 +77,31 @@ class Food:
         self.visible = True  # when food moves off boundary
     def draw(self,win):
         pygame.draw.circle(win,self.color,(self.x,self.y),self.radius)            
-    def update(self,win,player): 
-        if self.dirx == 'right':
-            self.x = self.x + self.velx
-        if self.dirx == 'left':
-            self.x = self.x - self.velx
-        if self.diry == 'up':
-            self.y = self.y - self.vely
-        if self.diry == 'down':
-            self.y = self.y + self.vely
-        
-        #food and player collision
-        distance = math.hypot(player.centerx-self.x,player.centery-self.y)
-        if distance <= player.radius + self.radius:
-            self.collision = True
-            player.score = player.score + int(self.radius * .50)
-            player.radius = player.radius + int(self.radius * .05)
-            #print(player.score)
-        
-        if self.x < 0 or self.x > WIDTH or self.y < 0 or self.y > HEIGHT:
-            self.visible = False
-        else:
-            self.visible = True
+    def update(self,win,player):
+        if not space: 
+            if self.dirx == 'right':
+                self.x = self.x + self.velx
+            if self.dirx == 'left':
+                self.x = self.x - self.velx
+            if self.diry == 'up':
+                self.y = self.y - self.vely
+            if self.diry == 'down':
+                self.y = self.y + self.vely
+            
+            #food and player collision
+            if not player.collision:
+                distance = math.hypot(player.centerx-self.x,player.centery-self.y)
+                if distance <= player.radius + self.radius:
+                    self.collision = True
+                    player.score = player.score + int(self.radius * .50)
+                    player.radius = player.radius + int(self.radius * .1)
+                    #print(player.score)
+            
+            #checking if food goes off boundary
+            if self.x < 0 or self.x > WIDTH or self.y < 0 or self.y > HEIGHT:
+                self.visible = False
+            else:
+                self.visible = True
         if self.visible:   
             self.draw(win)
 
@@ -112,36 +123,37 @@ class Enemy:
         pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx-self.radius,self.centery+self.radius),5)
         pygame.draw.line(win,(255,255,255),(self.centerx,self.centery),(self.centerx,self.centery-(self.radius+5)),5)
     def update(self,win,food_list):  #0 for left, 1 for right, 2 for up , 3 for down
-        #Change direction
-        if self.centerx < 0 or self.centerx > WIDTH or self.centery < 0 or self.centery > HEIGHT:
-            if self.dirx == 0:
-                self.dirx = 1
-            else:
-                self.dirx = 0
-            if self.diry == 2:
-                self.diry = 3
-            else:
-                self.diry = 2
-        
-        #food and enemy collision
-        for food in food_list:
-            dist = math.hypot(food.x-self.centerx,food.y-self.centery)            
-            if dist <= food.radius + self.radius:
-                food.collision = True
-                self.radius = self.radius + int(food.radius * 0.02)
+        if not space:
+            #Change direction
+            if self.centerx < 0 or self.centerx > WIDTH or self.centery < 0 or self.centery > HEIGHT:
+                if self.dirx == 0:
+                    self.dirx = 1
+                else:
+                    self.dirx = 0
+                if self.diry == 2:
+                    self.diry = 3
+                else:
+                    self.diry = 2
+            
+            #food and enemy collision
+            for food in food_list:
+                dist = math.hypot(food.x-self.centerx,food.y-self.centery)            
+                if dist <= food.radius + self.radius:
+                    food.collision = True
+                    self.radius = self.radius + int(food.radius * 0.02)
 
-        if self.dirx == 0 and self.diry == 2: #left and up 
-            self.centerx = self.centerx - self.velx
-            self.centery = self.centery - self.vely
-        if self.dirx == 0 and self.diry == 3: #left and down
-            self.centerx = self.centerx - self.velx
-            self.centery = self.centery + self.vely
-        if self.dirx == 1 and self.diry == 2: #right and up
-            self.centerx = self.centerx + self.velx
-            self.centery = self.centery - self.vely
-        if self.dirx == 1 and self.diry == 3: #right and down
-            self.centerx = self.centerx + self.velx
-            self.centery = self.centery + self.vely
+            if self.dirx == 0 and self.diry == 2: #left and up 
+                self.centerx = self.centerx - self.velx
+                self.centery = self.centery - self.vely
+            if self.dirx == 0 and self.diry == 3: #left and down
+                self.centerx = self.centerx - self.velx
+                self.centery = self.centery + self.vely
+            if self.dirx == 1 and self.diry == 2: #right and up
+                self.centerx = self.centerx + self.velx
+                self.centery = self.centery - self.vely
+            if self.dirx == 1 and self.diry == 3: #right and down
+                self.centerx = self.centerx + self.velx
+                self.centery = self.centery + self.vely
         self.draw(win)
 
 player = Player(WIDTH//2,HEIGHT//2,(140, 46, 184),30)
@@ -234,12 +246,37 @@ def check_bg_in_view():
 
 resize_event = pygame.USEREVENT + 3
 pygame.time.set_timer(resize_event,5000)
+def start_stop_menu():
+    global player
+    msg1 = ""
+    pygame.draw.rect(win,(255,255,255),(WIDTH//2-200,HEIGHT//2-250,400,500))
+    pygame.draw.rect(win,(21, 191, 183),(WIDTH//2-200 + 10,HEIGHT//2-250+10,380,480))
+
+    if player.collision:
+        msg1 = 'G A M E O V E R'
+    elif space: 
+        msg1 = 'RESTART GAME'
+
+    myfont = pygame.font.SysFont('Indie Flower', 50)
+    if player.collision or space:
+        #msg1 = 'G A M E O V E R'
+        textsurface1 = myfont.render(msg1, False, (201, 12, 25))
+        win.blit(textsurface1,(WIDTH//2-textsurface1.get_width()//2,HEIGHT//3))
+        msg2 = 'PLAY AGAIN'
+        textsurface2 = myfont.render(msg2, False, (77, 9, 60))
+        win.blit(textsurface2,(WIDTH//2-textsurface2.get_width()//2,HEIGHT//3 + textsurface1.get_height() + 50))
+        msg3 = 'Your Score: ' + str(player.score)
+        textsurface3 = myfont.render(msg3, False, (106, 14, 156))
+        win.blit(textsurface3,(WIDTH//2-textsurface3.get_width()//2,HEIGHT//3 + textsurface2.get_height()*2 + 100))
 
 def redrawwindow():
-    global count
+    global count,space
     win.fill((0,0,0))   
     mousexy = pygame.mouse.get_pos() 
-    player.centerx,player.centery = mousexy   
+    if not player.collision and not space:
+        player.centerx,player.centery = mousexy  
+    else:
+        start_stop_menu() 
 
     score = player.score
     score_msg = 'Score: '+str(score)
@@ -287,10 +324,10 @@ def redrawwindow():
                 if dist <= enemy_list[i].radius + enemy_list[j].radius:
                     if enemy_list[i].radius > enemy_list[j].radius: #i eats j
                         enemy_list[j].collision = True
-                        enemy_list[i].radius = enemy_list[i].radius + int(enemy_list[j].radius * 0.05)
+                        enemy_list[i].radius = enemy_list[i].radius + int(enemy_list[j].radius * 0.02)
                     elif enemy_list[i].radius < enemy_list[j].radius: #j eats i
                         enemy_list[i].collision = True
-                        enemy_list[j].radius = enemy_list[j].radius + int(enemy_list[i].radius * 0.05)
+                        enemy_list[j].radius = enemy_list[j].radius + int(enemy_list[i].radius * 0.02)
 
     #remove dead enemies and spawn new enemies
     for enemy in enemy_list:
@@ -306,12 +343,12 @@ def redrawwindow():
             enemy_list.append(enemy)
         else:
             enemy.update(win,food_list)    
-
+    #print(len(enemy_list))
     player.update(win,enemy_list)
     pygame.display.update()
 
 run=True
-
+space = False
 while run:
     #pygame.time.delay(3)
     #clock.tick(90) 
@@ -320,10 +357,12 @@ while run:
         if event.type == pygame.QUIT:
             run = False
         if event.type == pygame.USEREVENT + 3:
-            #print('called')
-            for food in food_list:
-                food.radius = food.radius + 1
-    
+            if not player.collision and not space:
+                for food in food_list:
+                    food.radius = food.radius + 1
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                space = not space
     relxy = pygame.mouse.get_rel()
     if relxy[0] < 0: #mouse is moving in left direction
         for bg in bg_list:
