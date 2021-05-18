@@ -156,18 +156,8 @@ class Enemy:
                 self.centery = self.centery + self.vely
         self.draw(win)
 
-player = Player(WIDTH//2,HEIGHT//2,(140, 46, 184),30)
-center_bg = BG(0,0,WIDTH,HEIGHT,0,0)
-food_list=[]
-food_count = 40
-for i in range(food_count):
-    food = Food(random.randint(10,1200),random.randint(10,600),random.randint(3,7))
-    food_list.append(food)
-
-enemy_list = []
-enemy_count = 10
 def check_player_enemy_collision(ex,ey,er):
-    global enemy_list    
+    global enemy_list,player  
     dist = math.hypot(ex-player.centerx,ey-player.centery)
     if dist <= player.radius+er:
         return True
@@ -177,20 +167,36 @@ def check_player_enemy_collision(ex,ey,er):
             return True
     return False
 
-for i in range(enemy_count):
-    res = True
-    ex,ey,er=0,0,0
-    while res == True:
-        ex = random.randint(10,1200)
-        ey = random.randint(10,600)
-        er = random.randint(30,40)
-        res = check_player_enemy_collision(ex,ey,er)    
-    enemy = Enemy(ex,ey,er)
-    enemy_list.append(enemy)
+def initialize_game():
+    global enemy_count,count,player,center_bg,food_list,food_count,enemy_list,bg_list,resize_event
+    player = Player(WIDTH//2,HEIGHT//2,(140, 46, 184),30)
+    center_bg = BG(0,0,WIDTH,HEIGHT,0,0)
+    food_list=[]
+    food_count = 40
+    for i in range(food_count):
+        food = Food(random.randint(10,1200),random.randint(10,600),random.randint(3,7))
+        food_list.append(food)
+    enemy_list = []
+    enemy_count = 10
+    for i in range(enemy_count):
+        res = True
+        ex,ey,er=0,0,0
+        while res == True:
+            ex = random.randint(10,1200)
+            ey = random.randint(10,600)
+            er = random.randint(30,40)
+            res = check_player_enemy_collision(ex,ey,er)    
+        enemy = Enemy(ex,ey,er)
+        enemy_list.append(enemy)
 
-bg_list = []
-bg_list.append(center_bg)
-count = 0
+    bg_list = []
+    bg_list.append(center_bg)
+    count = 0
+    resize_event = pygame.USEREVENT + 3
+    pygame.time.set_timer(resize_event,5000)
+
+initialize_game()
+
 def create_new_bg():
     length = len(bg_list)
 
@@ -244,10 +250,11 @@ def check_bg_in_view():
         bg_list.remove(bg)
         print('deleted')
 
-resize_event = pygame.USEREVENT + 3
-pygame.time.set_timer(resize_event,5000)
+
+play_again_rect=None
+textsurface1=None
 def start_stop_menu():
-    global player
+    global player,play_again_rect,textsurface1
     msg1 = ""
     pygame.draw.rect(win,(255,255,255),(WIDTH//2-200,HEIGHT//2-250,400,500))
     pygame.draw.rect(win,(21, 191, 183),(WIDTH//2-200 + 10,HEIGHT//2-250+10,380,480))
@@ -255,15 +262,16 @@ def start_stop_menu():
     if player.collision:
         msg1 = 'G A M E O V E R'
     elif space: 
-        msg1 = 'RESTART GAME'
+        msg1 = 'Press space to continue'
 
-    myfont = pygame.font.SysFont('Indie Flower', 50)
+    myfont = pygame.font.SysFont('Indie Flower', 45)
     if player.collision or space:
         #msg1 = 'G A M E O V E R'
         textsurface1 = myfont.render(msg1, False, (201, 12, 25))
         win.blit(textsurface1,(WIDTH//2-textsurface1.get_width()//2,HEIGHT//3))
-        msg2 = 'PLAY AGAIN'
+        msg2 = 'Click to restart game'
         textsurface2 = myfont.render(msg2, False, (77, 9, 60))
+        play_again_rect = pygame.Rect(WIDTH//2-textsurface2.get_width()//2,HEIGHT//3 + textsurface1.get_height() + 50,textsurface2.get_width(),textsurface2.get_height())        
         win.blit(textsurface2,(WIDTH//2-textsurface2.get_width()//2,HEIGHT//3 + textsurface1.get_height() + 50))
         msg3 = 'Your Score: ' + str(player.score)
         textsurface3 = myfont.render(msg3, False, (106, 14, 156))
@@ -271,12 +279,7 @@ def start_stop_menu():
 
 def redrawwindow():
     global count,space
-    win.fill((0,0,0))   
-    mousexy = pygame.mouse.get_pos() 
-    if not player.collision and not space:
-        player.centerx,player.centery = mousexy  
-    else:
-        start_stop_menu() 
+    win.fill((0,0,0))        
 
     score = player.score
     score_msg = 'Score: '+str(score)
@@ -345,6 +348,11 @@ def redrawwindow():
             enemy.update(win,food_list)    
     #print(len(enemy_list))
     player.update(win,enemy_list)
+    mousexy = pygame.mouse.get_pos() 
+    if not player.collision and not space:
+        player.centerx,player.centery = mousexy  
+    else:
+        start_stop_menu()
     pygame.display.update()
 
 run=True
@@ -354,9 +362,17 @@ while run:
     #clock.tick(90) 
     redrawwindow()
     for event in pygame.event.get():
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mb = pygame.mouse.get_pressed()
+            if mb[0]:
+                if player.collision or space: 
+                    #source_rect = pygame.Rect(x,y,textsurface1.get_width(),textsurface1.get_height())            
+                    if play_again_rect.collidepoint(pygame.mouse.get_pos()):
+                        pygame.time.set_timer(resize_event,0)
+                        initialize_game()
         if event.type == pygame.QUIT:
             run = False
-        if event.type == pygame.USEREVENT + 3:
+        if event.type == resize_event:
             if not player.collision and not space:
                 for food in food_list:
                     food.radius = food.radius + 1
